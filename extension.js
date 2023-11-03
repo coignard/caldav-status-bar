@@ -18,7 +18,7 @@
 
 /* exported init */
 
-const GETTEXT_DOMAIN = "next-up-indicator-extension";
+const GETTEXT_DOMAIN = "caldav-status-bar-indicator-extension";
 
 const { GObject, St, Clutter, GLib } = imports.gi;
 
@@ -39,14 +39,13 @@ const DateHelperFunctions = Me.imports.dateHelperFunctions;
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
         _init() {
-            super._init(0.0, _('Next Up Indicator'));
+            super._init(0.0, _('CalDAV Status Bar Indicator'));
 
             this._calendarSource = new Calendar.DBusEventSource();
 
             this._loadGUI();
             this._initialiseMenu();
         }
-
 
 
         _loadGUI() {
@@ -60,28 +59,17 @@ const Indicator = GObject.registerClass(
                 pack_start: false
             });
 
-
-            this._confettiGicon = Gio.icon_new_for_string(Me.path + "/assets/party-popper.png");
-            this._alarmIcon = new St.Icon({
-                icon_name: 'alarm-symbolic',
+            this._calendarIcon = new St.Icon({
+                icon_name: 'x-office-calendar-symbolic',
                 style_class: 'system-status-icon'
             });
 
-            this.icon = this._alarmIcon;
-
-
-            this.text = new St.Label({
-                text: "Loading",
-                y_expand: true,
-                y_align: Clutter.ActorAlign.CENTER
-            });
-
+            this.icon = this._calendarIcon;
+            this.text = new St.Label({ text: "", y_expand: true, y_align: Clutter.ActorAlign.CENTER });
 
             this._menuLayout.add_actor(this.icon);
             this._menuLayout.add_actor(this.text);
             this.add_actor(this._menuLayout);
-
-            return;
         }
 
 
@@ -99,13 +87,18 @@ const Indicator = GObject.registerClass(
         }
 
 
-        showAlarmIcon() {
-            this.icon.set_icon_name("alarm-symbolic");
+        showCalendarIcon() {
+            this.icon.set_icon_name("x-office-calendar-symbolic");
         }
 
 
-        showConfettiIcon() {
-            this.icon.set_gicon(this._confettiGicon);
+        showIndicator() {
+            this._menuLayout.show();
+        }
+
+
+        hideIndicator() {
+            this._menuLayout.hide();
         }
 
 
@@ -146,17 +139,15 @@ class Extension {
     enable() {
         this._indicator = new Indicator();
 
-        this._settings = ExtensionUtils.getSettings("org.gnome.shell.extensions.next-up");
+        this._settings = ExtensionUtils.getSettings("org.gnome.shell.extensions.caldav-status-bar");
         this._settingChangedSignal = this._settings.connect("changed::which-panel", () => {
             this.unloadIndicator();
-            this.loadIndicator();
         });
 
 
         // Wait 3 seconds before loading the indicator
         // So that it isn't loaded too early and positioned after other elements in the panel
         this.delaySourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3, () => {
-            this.loadIndicator();
             this._startLoop();
 
             return false;
@@ -187,7 +178,7 @@ class Extension {
 
         const whichPanel = this._settings.get_int("which-panel");
 
-        boxes[whichPanel].insert_child_at_index(this._indicator.container, 0);
+        boxes[whichPanel].insert_child_at_index(this._indicator.container, 1);
     }
 
 
@@ -196,21 +187,37 @@ class Extension {
     }
 
 
+    addIndicatorToPanel() {
+        const whichPanel = this._settings.get_int("which-panel");
+        const boxes = [
+            Main.panel._leftBox,
+            Main.panel._centerBox,
+            Main.panel._rightBox
+        ];
+        this._indicatorContainer = this._indicator.container;
+        boxes[whichPanel].insert_child_at_index(this._indicatorContainer, 1);
+    }
+
+
+    removeIndicatorFromPanel() {
+        if (this._indicatorContainer && this._indicatorContainer.get_parent()) {
+            this._indicatorContainer.get_parent().remove_child(this._indicatorContainer);
+        }
+    }
+
+
     refreshIndicator() {
         const todaysEvents = DateHelperFunctions.getTodaysEvents(this._indicator._calendarSource);
         const eventStatus = DateHelperFunctions.getNextEventsToDisplay(todaysEvents);
         const text = DateHelperFunctions.eventStatusToIndicatorText(eventStatus);
 
-
-        if ((eventStatus.currentEvent === null) && (eventStatus.nextEvent === null)) {
-            this._indicator.showConfettiIcon();
+        if (eventStatus.currentEvent === null && eventStatus.nextEvent === null) {
+            this.removeIndicatorFromPanel();
+        } else {
+            this.addIndicatorToPanel();
+            this._indicator.showIndicator();
+            this._indicator.setText(text);
         }
-        else {
-            this._indicator.showAlarmIcon();
-        }
-
-
-        this._indicator.setText(text);
     }
 
 

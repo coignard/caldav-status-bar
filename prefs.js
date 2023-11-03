@@ -12,7 +12,7 @@ function init() {
 function fillPreferencesWindow(window) {
     // Use the same GSettings schema as in `extension.js`
     const settings = ExtensionUtils.getSettings(
-        'org.gnome.shell.extensions.next-up');
+        'org.gnome.shell.extensions.caldav-status-bar');
 
     // Create a preferences page and group
     const page = new Adw.PreferencesPage();

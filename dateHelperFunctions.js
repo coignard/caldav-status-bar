@@ -22,7 +22,14 @@ function getTodaysEvents(calendarSource) {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    const todaysEvents = src.getEvents(today, tomorrow);
+    let todaysEvents = src.getEvents(today, tomorrow);
+
+    todaysEvents = todaysEvents.filter(event => {
+        const start = event.date;
+        const end = event.end;
+        return !(start.getHours() === 0 && start.getMinutes() === 0 &&
+                 end.getHours() === 0 && end.getMinutes() === 0);
+    });
 
     return todaysEvents;
 }
@@ -30,6 +37,7 @@ function getTodaysEvents(calendarSource) {
 
 function getNextEventsToDisplay(todaysEvents) {
     const now = new Date();
+    const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
     const N = todaysEvents.length;
 
     let currentEvent = null; // The calendar event the user is currently in
@@ -76,10 +84,17 @@ function getNextEventsToDisplay(todaysEvents) {
     }
 
 
-    return {
-        currentEvent: currentEvent,
-        nextEvent: nextEvent
-    };
+    if (nextEvent && nextEvent.date <= fiveMinutesLater) {
+        return {
+            currentEvent: currentEvent,
+            nextEvent: nextEvent
+        };
+    } else {
+        return {
+            currentEvent: currentEvent,
+            nextEvent: null
+        };
+    }
 }
 
 
@@ -93,7 +108,7 @@ function eventStatusToIndicatorText(eventStatus) {
         const summary = trimLongEventName(event.summary);
 
 
-        return `In ${diffText}: ${summary} at ${timeText}`;
+        return `${summary} dans ${diffText}`;
     }
 
     function displayCurrentEventAndNextEvent(currentEvent, nextEvent) {
@@ -103,17 +118,13 @@ function eventStatusToIndicatorText(eventStatus) {
         const summary = trimLongEventName(nextEvent.summary);
 
 
-        return `Ends in ${endsInText}. Next: ${summary} at ${timeText}`;
+        return `${event.summary} (${endsInText})`;
     }
 
     function displayCurrentEvent(event) {
         const endsInText = getTimeToEventAsText(event.end);
 
-        return `Ends in ${endsInText}: ${event.summary}`;
-    }
-
-    function displayNoEvents() {
-        return "Done for today!";
+        return `${event.summary}`;
     }
 
 
@@ -121,7 +132,7 @@ function eventStatusToIndicatorText(eventStatus) {
 
     if (currentEvent != null) {
         if (nextEvent != null) {
-            return displayCurrentEventAndNextEvent(currentEvent, nextEvent);
+            return displayNextEvent(nextEvent);
         }
         else {
             return displayCurrentEvent(currentEvent);
@@ -132,7 +143,7 @@ function eventStatusToIndicatorText(eventStatus) {
             return displayNextEvent(nextEvent);
         }
         else {
-            return displayNoEvents();
+            return false;
         }
     }
 }
@@ -158,5 +169,5 @@ function getTimeToEventAsText(eventDate) {
     const hrDiff = Math.floor(diffInMins / 60);
     const minDiff = diffInMins % 60;
 
-    return hrDiff > 0 ? `${hrDiff} hr ${minDiff} min` : `${minDiff} min`;
+    return hrDiff > 0 ? `${hrDiff}h${minDiff}` : `${minDiff} min`;
 }
