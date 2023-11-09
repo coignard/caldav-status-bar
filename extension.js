@@ -18,35 +18,27 @@
 
 /* exported init */
 
-const GETTEXT_DOMAIN = "caldav-status-bar-indicator-extension";
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 
-const { GObject, St, Clutter, GLib } = imports.gi;
-
-const ExtensionUtils = imports.misc.extensionUtils;
-const Calendar = imports.ui.calendar;
-const Gio = imports.gi.Gio;
-const Main = imports.ui.main;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-
-const _ = ExtensionUtils.gettext;
-
-
-const Me = ExtensionUtils.getCurrentExtension();
-const DateHelperFunctions = Me.imports.dateHelperFunctions;
-
+import * as Calendar from 'resource:///org/gnome/shell/ui/calendar.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as DateHelperFunctions from './dateHelperFunctions.js';
 
 const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
         _init() {
-            super._init(0.0, _('CalDAV Status Bar Indicator'));
+            super._init(0.0, 'CalDAV Status Bar Indicator');
 
             this._calendarSource = new Calendar.DBusEventSource();
 
             this._loadGUI();
             this._initialiseMenu();
         }
-
 
         _loadGUI() {
             this._menuLayout = new St.BoxLayout({
@@ -72,7 +64,6 @@ const Indicator = GObject.registerClass(
             this.add_actor(this._menuLayout);
         }
 
-
         _initialiseMenu() {
             const settingsItem = new PopupMenu.PopupMenuItem(_('Settings'));
             settingsItem.connect('activate', () => {
@@ -81,26 +72,21 @@ const Indicator = GObject.registerClass(
             this.menu.addMenuItem(settingsItem);
         }
 
-
         setText(text) {
             this.text.set_text(text);
         }
-
 
         showCalendarIcon() {
             this.icon.set_icon_name("x-office-calendar-symbolic");
         }
 
-
         showIndicator() {
             this._menuLayout.show();
         }
 
-
         hideIndicator() {
             this._menuLayout.hide();
         }
-
 
         vfunc_event(event) {
 
@@ -127,32 +113,14 @@ const Indicator = GObject.registerClass(
         }
     });
 
-
-
 class Extension {
     constructor(uuid) {
         this._uuid = uuid;
-
-        ExtensionUtils.initTranslations(GETTEXT_DOMAIN);
     }
 
     enable() {
         this._indicator = new Indicator();
-
-        this._settings = ExtensionUtils.getSettings("org.gnome.shell.extensions.caldav-status-bar");
-        this._settingChangedSignal = this._settings.connect("changed::which-panel", () => {
-            this.unloadIndicator();
-        });
-
-
-        // Wait 3 seconds before loading the indicator
-        // So that it isn't loaded too early and positioned after other elements in the panel
-        this.delaySourceId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 3, () => {
-            this._startLoop();
-
-            return false;
-        });
-
+        this._startLoop();
     }
 
     _startLoop() {
@@ -161,50 +129,22 @@ class Extension {
             5,                               // seconds to wait
             () => {
                 this.refreshIndicator();
-
                 return GLib.SOURCE_CONTINUE;
             }
         );
     }
 
-
     loadIndicator() {
-
-        const boxes = [
-            Main.panel._leftBox,
-            Main.panel._centerBox,
-            Main.panel._rightBox
-        ];
-
-        const whichPanel = this._settings.get_int("which-panel");
-
-        boxes[whichPanel].insert_child_at_index(this._indicator.container, 1);
-    }
-
-
-    unloadIndicator() {
-        this._indicator.container.get_parent().remove_actor(this._indicator.container);
-    }
-
-
-    addIndicatorToPanel() {
-        const whichPanel = this._settings.get_int("which-panel");
-        const boxes = [
-            Main.panel._leftBox,
-            Main.panel._centerBox,
-            Main.panel._rightBox
-        ];
-        this._indicatorContainer = this._indicator.container;
-        boxes[whichPanel].insert_child_at_index(this._indicatorContainer, 1);
-    }
-
-
-    removeIndicatorFromPanel() {
-        if (this._indicatorContainer && this._indicatorContainer.get_parent()) {
-            this._indicatorContainer.get_parent().remove_child(this._indicatorContainer);
+        if (!this._indicator.container.get_parent()) {
+            Main.panel._centerBox.insert_child_at_index(this._indicator.container, 1);
         }
     }
 
+    unloadIndicator() {
+        if (this._indicator.container.get_parent()) {
+            this._indicator.container.get_parent().remove_child(this._indicator.container);
+        }
+    }
 
     refreshIndicator() {
         const todaysEvents = DateHelperFunctions.getTodaysEvents(this._indicator._calendarSource);
@@ -212,42 +152,29 @@ class Extension {
         const text = DateHelperFunctions.eventStatusToIndicatorText(eventStatus);
 
         if (eventStatus.currentEvent === null && eventStatus.nextEvent === null) {
-            this.removeIndicatorFromPanel();
+            this.unloadIndicator();
+            this._indicator.hideIndicator();
         } else {
-            this.addIndicatorToPanel();
+            this.loadIndicator();
             this._indicator.showIndicator();
             this._indicator.setText(text);
         }
     }
 
-
     disable() {
-        Main.panel._centerBox.remove_child(this._indicator.container);
-
-
-        this._settings.disconnect(this._settingChangedSignal);
-
-
-        this._indicator.destroy();
-        this._indicator = null;
-
-
+        this.unloadIndicator();
+        if (this._indicator) {
+            this._indicator.destroy();
+            this._indicator = null;
+        }
 
         if (this.sourceId) {
             GLib.Source.remove(this.sourceId);
             this.sourceId = null;
         }
-
-        if (this.delaySourceId) {
-            GLib.Source.remove(this.delaySourceId);
-            this.delaySourceId = null;
-        }
     }
 }
 
-
-
-function init(meta) {
+export default function init(meta) {
     return new Extension(meta.uuid);
 }
-

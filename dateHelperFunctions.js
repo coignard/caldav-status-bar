@@ -1,7 +1,6 @@
-const MAX_EVENT_SUMMARY_LENGTH = 35;
+export const MAX_EVENT_SUMMARY_LENGTH = 35;
 
-
-function trimLongEventName(summary) {
+export function trimLongEventName(summary) {
     if (summary.length > MAX_EVENT_SUMMARY_LENGTH) {
         return summary.substring(0, MAX_EVENT_SUMMARY_LENGTH) + "...";
     }
@@ -10,8 +9,7 @@ function trimLongEventName(summary) {
     }
 }
 
-
-function getTodaysEvents(calendarSource) {
+export function getTodaysEvents(calendarSource) {
 
     const src = calendarSource;
     src._loadEvents(true);
@@ -34,8 +32,7 @@ function getTodaysEvents(calendarSource) {
     return todaysEvents;
 }
 
-
-function getNextEventsToDisplay(todaysEvents) {
+export function getNextEventsToDisplay(todaysEvents) {
     const now = new Date();
     const fiveMinutesLater = new Date(now.getTime() + 5 * 60000);
     const N = todaysEvents.length;
@@ -83,7 +80,6 @@ function getNextEventsToDisplay(todaysEvents) {
         }
     }
 
-
     if (nextEvent && nextEvent.date <= fiveMinutesLater) {
         return {
             currentEvent: currentEvent,
@@ -97,16 +93,13 @@ function getNextEventsToDisplay(todaysEvents) {
     }
 }
 
-
-
-function eventStatusToIndicatorText(eventStatus) {
+export function eventStatusToIndicatorText(eventStatus) {
 
     function displayNextEvent(event) {
         const timeText = getTimeOfEventAsText(event.date);
         const diffText = getTimeToEventAsText(event.date);
 
         const summary = trimLongEventName(event.summary);
-
 
         return `${summary} dans ${diffText}`;
     }
@@ -117,7 +110,6 @@ function eventStatusToIndicatorText(eventStatus) {
 
         const summary = trimLongEventName(nextEvent.summary);
 
-
         return `${event.summary} (${endsInText})`;
     }
 
@@ -126,7 +118,6 @@ function eventStatusToIndicatorText(eventStatus) {
 
         return `${event.summary}`;
     }
-
 
     const { currentEvent, nextEvent } = eventStatus;
 
@@ -148,9 +139,7 @@ function eventStatusToIndicatorText(eventStatus) {
     }
 }
 
-
-
-function getTimeOfEventAsText(eventDate) {
+export function getTimeOfEventAsText(eventDate) {
     const hrs = eventDate.getHours();
     let mins = eventDate.getMinutes().toString();
 
@@ -160,8 +149,7 @@ function getTimeOfEventAsText(eventDate) {
     return time;
 }
 
-
-function getTimeToEventAsText(eventDate) {
+export function getTimeToEventAsText(eventDate) {
     const now = new Date();
     const diff = Math.abs(eventDate - now);
     const diffInMins = Math.ceil(diff / (1000 * 60));
