@@ -53,13 +53,12 @@ const Indicator = GObject.registerClass(
 
             this._calendarIcon = new St.Icon({
                 icon_name: 'x-office-calendar-symbolic',
-                style_class: 'system-status-icon'
+                style_class: 'system-status-icon',
+                visible: false
             });
 
-            this.icon = this._calendarIcon;
             this.text = new St.Label({ text: "", y_expand: true, y_align: Clutter.ActorAlign.CENTER });
 
-            this._menuLayout.add_actor(this.icon);
             this._menuLayout.add_actor(this.text);
             this.add_actor(this._menuLayout);
         }
@@ -74,6 +73,16 @@ const Indicator = GObject.registerClass(
 
         setText(text) {
             this.text.set_text(text);
+        }
+
+        updateCalendarIconVisibility(showIcon) {
+            if (showIcon && !this._calendarIcon.get_parent()) {
+                this._menuLayout.insert_child_at_index(this._calendarIcon, 0);
+                this._calendarIcon.visible = true;
+            } else if (!showIcon && this._calendarIcon.get_parent()) {
+                this._menuLayout.remove_actor(this._calendarIcon);
+                this._calendarIcon.visible = false;
+            }
         }
 
         showCalendarIcon() {
@@ -110,6 +119,11 @@ const Indicator = GObject.registerClass(
             }
 
             return Clutter.EVENT_PROPAGATE;
+        }
+
+        containsEmoji(text) {
+            const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+            return emojiRegex.test(text);
         }
     });
 
@@ -151,6 +165,12 @@ class Extension {
         const eventStatus = DateHelperFunctions.getNextEventsToDisplay(todaysEvents);
         const text = DateHelperFunctions.eventStatusToIndicatorText(eventStatus);
 
+        if (text === "") {
+            this.unloadIndicator();
+            this._indicator.hideIndicator();
+            return;
+        }
+
         if (eventStatus.currentEvent === null && eventStatus.nextEvent === null) {
             this.unloadIndicator();
             this._indicator.hideIndicator();
@@ -158,6 +178,10 @@ class Extension {
             this.loadIndicator();
             this._indicator.showIndicator();
             this._indicator.setText(text);
+
+            const showIcon = !this._indicator.containsEmoji(eventStatus.currentEvent?.summary || "") &&
+                             !this._indicator.containsEmoji(eventStatus.nextEvent?.summary || "");
+            this._indicator.updateCalendarIconVisibility(showIcon);
         }
     }
 

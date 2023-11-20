@@ -134,7 +134,7 @@ export function eventStatusToIndicatorText(eventStatus) {
             return displayNextEvent(nextEvent);
         }
         else {
-            return false;
+            return "";
         }
     }
 }
