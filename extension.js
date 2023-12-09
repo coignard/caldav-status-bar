@@ -26,7 +26,6 @@ import GLib from 'gi://GLib';
 import * as Calendar from 'resource:///org/gnome/shell/ui/calendar.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as DateHelperFunctions from './dateHelperFunctions.js';
 
 const Indicator = GObject.registerClass(
@@ -37,7 +36,6 @@ const Indicator = GObject.registerClass(
             this._calendarSource = new Calendar.DBusEventSource();
 
             this._loadGUI();
-            this._initialiseMenu();
         }
 
         _loadGUI() {
@@ -48,7 +46,8 @@ const Indicator = GObject.registerClass(
                 y_align: Clutter.ActorAlign.CENTER,
                 reactive: true,
                 x_expand: true,
-                pack_start: false
+                pack_start: false,
+                style_class: "no-hover"
             });
 
             this._calendarIcon = new St.Icon({
@@ -61,14 +60,6 @@ const Indicator = GObject.registerClass(
 
             this._menuLayout.add_actor(this.text);
             this.add_actor(this._menuLayout);
-        }
-
-        _initialiseMenu() {
-            const settingsItem = new PopupMenu.PopupMenuItem(_('Settings'));
-            settingsItem.connect('activate', () => {
-                ExtensionUtils.openPrefs();
-            });
-            this.menu.addMenuItem(settingsItem);
         }
 
         setText(text) {
@@ -95,30 +86,6 @@ const Indicator = GObject.registerClass(
 
         hideIndicator() {
             this._menuLayout.hide();
-        }
-
-        vfunc_event(event) {
-
-            if ((event.type() == Clutter.EventType.TOUCH_END || event.type() == Clutter.EventType.BUTTON_RELEASE)) {
-
-                if (event.get_button() === Clutter.BUTTON_PRIMARY) {
-
-                    // Show calendar on left click
-                    if (this.menu.isOpen) {
-                        this.menu._getTopMenu().close();
-                    }
-                    else {
-                        Main.panel.toggleCalendar();
-                    }
-
-                }
-                else {
-                    // Show settings menu on right click
-                    this.menu.toggle();
-                }
-            }
-
-            return Clutter.EVENT_PROPAGATE;
         }
 
         containsEmoji(text) {
