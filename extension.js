@@ -46,8 +46,7 @@ const Indicator = GObject.registerClass(
                 y_align: Clutter.ActorAlign.CENTER,
                 reactive: true,
                 x_expand: true,
-                pack_start: false,
-                style_class: "no-hover"
+                pack_start: false
             });
 
             this._calendarIcon = new St.Icon({
